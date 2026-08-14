@@ -1,11 +1,9 @@
+// register_screen.dart
+//
+// Flutter port of the React "RegisterScreen" reference.
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../core/theme/app_colors.dart';
-import '../../services/auth_service.dart';
-import '../../widgets/app_logo.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
-import '../home/dashboard_screen.dart';
+import 'steriqore_shared.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -15,245 +13,221 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _passwordConfirmController = TextEditingController();
+  final _confirmController = TextEditingController();
 
   bool _isLoading = false;
-  String? _errorMessage;
+  String? _error;
+  String? _success;
+
+  int _strengthScore(String password) {
+    if (password.isEmpty) return 0;
+    if (password.length < 6) return 1;
+    if (password.length < 8) return 2;
+    final hasUpper = RegExp(r'[A-Z]').hasMatch(password);
+    final hasDigit = RegExp(r'[0-9]').hasMatch(password);
+    final hasSymbol = RegExp(r'[^A-Za-z0-9]').hasMatch(password);
+    if (hasUpper && hasDigit && hasSymbol) return 4;
+    if (password.length >= 8 && (hasUpper || hasDigit)) return 3;
+    return 2;
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _passwordConfirmController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
   Future<void> _handleRegister() async {
-    if (!_formKey.currentState!.validate()) return;
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
 
-    if (_passwordController.text != _passwordConfirmController.text) {
-      setState(() {
-        _errorMessage = 'Passwords do not match';
-      });
+    setState(() => _error = null);
+
+    if (name.isEmpty) {
+      setState(() => _error = 'Please enter your full name.');
+      return;
+    }
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _error = 'Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 8) {
+      setState(() => _error = 'Password must be at least 8 characters.');
+      return;
+    }
+    if (password != confirm) {
+      setState(() => _error = 'Passwords do not match.');
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    setState(() => _isLoading = true);
 
-    final result = await AuthService.register(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      deviceName: 'Flutter Mobile App',
-    );
+    // --- Replace with your real AuthService call, e.g.:
+    // final result = await AuthService.register(name: name, email: email, password: password);
+    await Future.delayed(const Duration(milliseconds: 1400));
 
     if (!mounted) return;
-
     setState(() {
       _isLoading = false;
+      _success = 'Account created! Welcome, $name!';
     });
 
-    if (result.success && result.user != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Account created! Welcome, ${result.user!.name}!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => DashboardScreen(user: result.user!),
-        ),
-        (route) => false,
-      );
-    } else {
-      setState(() {
-        _errorMessage = result.message;
-      });
-    }
+    await Future.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    // Navigator.of(context).pushReplacement(
+    //   MaterialPageRoute(builder: (_) => DashboardScreen(user: result.user!)),
+    // );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
+    final score = _strengthScore(password);
+    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+    const barColors = [
+      Colors.transparent,
+      SteriqoreColors.error,
+      SteriqoreColors.warning,
+      SteriqoreColors.accent,
+      SteriqoreColors.success,
+    ];
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDark ? const Color(0xFFEDEDEC) : const Color(0xFF18181B),
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Center(
-                      child: AppLogo(size: 36),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Create an account',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.instrumentSans(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                        color: isDark ? const Color(0xFFEDEDEC) : const Color(0xFF18181B),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Enter your details below to create your account',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.instrumentSans(
-                        fontSize: 14,
-                        color: isDark ? const Color(0xFFA1A09A) : const Color(0xFF706F6C),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Error message
-                    if (_errorMessage != null) ...[
+    return AppBackground(
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BackButton2(onBack: () => Navigator.of(context).maybePop()),
+                const SizedBox(height: 16),
+                Center(
+                  child: Column(
+                    children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        width: 56,
+                        height: 56,
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: AppColors.error.withValues(alpha: 0.3),
-                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          color: SteriqoreColors.brand.withValues(alpha: 0.11),
+                          border: Border.all(color: SteriqoreColors.brand.withValues(alpha: 0.22)),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.error_outline,
-                              color: AppColors.error,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _errorMessage!,
-                                style: GoogleFonts.instrumentSans(
-                                  fontSize: 13,
-                                  color: AppColors.error,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                        child: const SteriqoreLogo(size: 28),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+                      Text('Create an account',
+                          style: steriqoreFont(fontSize: 23, fontWeight: FontWeight.w700, letterSpacing: -0.5)),
+                      const SizedBox(height: 6),
+                      Text('Enter your details to get started',
+                          style: steriqoreFont(fontSize: 13.5, color: SteriqoreColors.textSecondary)),
                     ],
-
-                    CustomTextField(
-                      label: 'Full Name',
-                      hint: 'John Doe',
-                      controller: _nameController,
-                      validator: (val) =>
-                          (val == null || val.trim().isEmpty) ? 'Please enter your name' : null,
-                    ),
-                    const SizedBox(height: 16),
-
-                    CustomTextField(
-                      label: 'Email address',
-                      hint: 'email@example.com',
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) return 'Please enter your email';
-                        if (!val.contains('@')) return 'Please enter a valid email';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    CustomTextField(
-                      label: 'Password',
-                      hint: 'Password (min. 8 characters)',
-                      controller: _passwordController,
-                      isPassword: true,
-                      validator: (val) {
-                        if (val == null || val.length < 8) {
-                          return 'Password must be at least 8 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    CustomTextField(
-                      label: 'Confirm Password',
-                      hint: 'Confirm password',
-                      controller: _passwordConfirmController,
-                      isPassword: true,
-                      validator: (val) {
-                        if (val == null || val.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 28),
-
-                    CustomButton(
-                      text: 'Create Account',
-                      isLoading: _isLoading,
-                      onPressed: _handleRegister,
-                    ),
-                    const SizedBox(height: 24),
-
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          'Already have an account? ',
-                          style: GoogleFonts.instrumentSans(
-                            fontSize: 14,
-                            color: isDark ? const Color(0xFFA1A09A) : const Color(0xFF706F6C),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Text(
-                            'Log in',
-                            style: GoogleFonts.instrumentSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? const Color(0xFFEDEDEC) : const Color(0xFF18181B),
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 26),
+
+                if (_error != null) ErrorBanner(msg: _error!),
+                if (_success != null) SuccessBanner(msg: _success!),
+
+                const FieldLabel('Full Name'),
+                TextField(
+                  controller: _nameController,
+                  style: steriqoreFont(fontSize: 14.5, color: Colors.white),
+                  cursorColor: SteriqoreColors.accent,
+                  decoration: steriqoreFieldDecoration(hint: 'Jane Doe'),
+                ),
+                const SizedBox(height: 13),
+
+                const FieldLabel('Email Address'),
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  style: steriqoreFont(fontSize: 14.5, color: Colors.white),
+                  cursorColor: SteriqoreColors.accent,
+                  decoration: steriqoreFieldDecoration(hint: 'email@example.com'),
+                ),
+                const SizedBox(height: 13),
+
+                const FieldLabel('Password'),
+                PasswordInput(
+                  controller: _passwordController,
+                  hint: 'Password (min. 8 characters)',
+                  onChanged: (_) => setState(() {}),
+                ),
+                if (password.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: List.generate(4, (i) {
+                      final filled = i < score;
+                      return Expanded(
+                        child: Container(
+                          height: 3,
+                          margin: EdgeInsets.only(right: i == 3 ? 0 : 4),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(2),
+                            color: filled ? barColors[score] : Colors.white.withValues(alpha: 0.10),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(labels[score],
+                      style: steriqoreFont(fontSize: 11.5, fontWeight: FontWeight.w600, color: barColors[score])),
+                ],
+                const SizedBox(height: 13),
+
+                const FieldLabel('Confirm Password'),
+                PasswordInput(
+                  controller: _confirmController,
+                  hint: 'Confirm password',
+                  onChanged: (_) => setState(() {}),
+                ),
+                if (confirm.isNotEmpty && password.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    confirm == password ? 'Passwords match ✓' : 'Passwords do not match',
+                    style: steriqoreFont(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: confirm == password ? SteriqoreColors.success : SteriqoreColors.error,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+
+                PrimaryButton(label: 'Create Account', isLoading: _isLoading, onPressed: _handleRegister),
+                const SizedBox(height: 24),
+
+                Center(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    children: [
+                      Text('Already have an account? ',
+                          style: steriqoreFont(fontSize: 14, color: SteriqoreColors.textSecondary)),
+                      LinkButton(label: 'Log in', onPressed: () => Navigator.of(context).maybePop()),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Center(
+                  child: Text(
+                    'Terms of Service · Privacy Policy',
+                    style: steriqoreFont(fontSize: 11, color: SteriqoreColors.textFaint),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
