@@ -19,13 +19,14 @@ class AppLogo extends StatelessWidget {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           width: size,
           height: size,
           decoration: BoxDecoration(
             color: primaryColor,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(size * 0.23),
           ),
           child: Center(
             child: Icon(
@@ -37,13 +38,17 @@ class AppLogo extends StatelessWidget {
         ),
         if (showText) ...[
           const SizedBox(width: 12),
-          Text(
-            'Steriqore',
-            style: GoogleFonts.instrumentSans(
-              fontSize: size * 0.52,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.5,
-              color: isDark ? const Color(0xFFEDEDEC) : const Color(0xFF18181B),
+          Flexible(
+            child: Text(
+              'Steriqore',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.instrumentSans(
+                fontSize: size * 0.52,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+                color: isDark ? const Color(0xFFEDEDEC) : const Color(0xFF18181B),
+              ),
             ),
           ),
         ],

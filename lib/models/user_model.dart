@@ -4,6 +4,8 @@ class UserModel {
   final String email;
   final String? emailVerifiedAt;
   final String? createdAt;
+  final String? updatedAt;
+  final String? twoFactorConfirmedAt;
 
   UserModel({
     required this.id,
@@ -11,6 +13,8 @@ class UserModel {
     required this.email,
     this.emailVerifiedAt,
     this.createdAt,
+    this.updatedAt,
+    this.twoFactorConfirmedAt,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +24,8 @@ class UserModel {
       email: json['email'] as String,
       emailVerifiedAt: json['email_verified_at'] as String?,
       createdAt: json['created_at'] as String?,
+      updatedAt: json['updated_at'] as String?,
+      twoFactorConfirmedAt: json['two_factor_confirmed_at'] as String?,
     );
   }
 
@@ -30,6 +36,8 @@ class UserModel {
       'email': email,
       'email_verified_at': emailVerifiedAt,
       'created_at': createdAt,
+      'updated_at': updatedAt,
+      'two_factor_confirmed_at': twoFactorConfirmedAt,
     };
   }
 }

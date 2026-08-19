@@ -1,24 +1,19 @@
-// dashboard_screen.dart
-//
-// Flutter port of the React "DashboardScreen" reference.
-//
-// Assumes a `user` object with `.name` and `.email` — swap `SteriqoreUser`
-// below for your real User model if you already have one.
-
 import 'package:flutter/material.dart';
-import 'steriqore_shared.dart';
-
-class SteriqoreUser {
-  final String name;
-  final String email;
-  const SteriqoreUser({required this.name, required this.email});
-}
+import 'package:go_router/go_router.dart';
+import '../../core/constants/api_constants.dart';
+import '../../core/theme/app_colors.dart';
+import '../../models/user_model.dart';
+import '../../roles/practitioner/practitioner_routes.dart';
+import '../../services/auth_service.dart';
+import '../../shared/dentistrack_shared.dart';
+import '../auth/login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final SteriqoreUser user;
+  final UserModel user;
+
   const DashboardScreen({
     super.key,
-    this.user = const SteriqoreUser(name: 'Alex Dumas', email: 'test@example.com'),
+    required this.user,
   });
 
   @override
@@ -26,381 +21,716 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  bool _isLoggingOut = false;
   int _activeTab = 0;
 
-  static const _tabs = [
-    (icon: Icons.grid_view_rounded, label: 'Home'),
-    (icon: Icons.show_chart_rounded, label: 'Activity'),
-    (icon: Icons.shield_outlined, label: 'Security'),
-    (icon: Icons.person_outline_rounded, label: 'Profile'),
+  static const _navTabs = [
+    (icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard_rounded, label: 'Home'),
+    (icon: Icons.qr_code_scanner_rounded, activeIcon: Icons.qr_code_scanner_rounded, label: 'Scan'),
+    (icon: Icons.inventory_2_outlined, activeIcon: Icons.inventory_2_rounded, label: 'Stock'),
+    (icon: Icons.sanitizer_outlined, activeIcon: Icons.sanitizer_rounded, label: 'Cycles'),
+    (icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
   ];
 
   String get _initials {
     final parts = widget.user.name.trim().split(RegExp(r'\s+'));
     final letters = parts.take(2).map((w) => w.isNotEmpty ? w[0] : '').join();
-    return letters.toUpperCase();
+    return letters.isNotEmpty ? letters.toUpperCase() : 'DR';
   }
 
   Future<void> _handleLogout() async {
-    setState(() => _isLoggingOut = true);
-    await Future.delayed(const Duration(milliseconds: 1000));
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.logout_rounded, color: AppColors.error),
+            const SizedBox(width: 10),
+            Text('Sign Out', style: dentistrackFont(fontSize: 18, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to end your session and sign out of STERIQORE?',
+          style: dentistrackFont(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: dentistrackFont(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Sign Out', style: dentistrackFont(fontWeight: FontWeight.w700, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await AuthService.logout();
     if (!mounted) return;
-    setState(() => _isLoggingOut = false);
-    // Navigator.of(context).pushReplacement(
-    //   MaterialPageRoute(builder: (_) => const LoginScreen()),
-    // );
+    try {
+      context.go('/login');
+    } catch (_) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
+  Widget _buildHomeTab(BuildContext context, BoxConstraints constraints) {
+    final isWide = constraints.maxWidth >= 640;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Greeting & Clinic Identity
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundElevated,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 18,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  _initials,
+                  style: dentistrackFont(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryInverse,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Practice Cabinet #104',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: dentistrackFont(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.successBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'ONLINE',
+                            style: dentistrackFont(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.user.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: dentistrackFont(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // High-level KPIs & Compliance Metrics (Adaptive 2-col or 4-col)
+        if (isWide)
+          const Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.sanitizer_rounded,
+                  label: 'Sterilization',
+                  value: '100%',
+                  sub: 'All cycles validated',
+                  accentColor: AppColors.success,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.inventory_2_rounded,
+                  label: 'DLC Alerts',
+                  value: '2',
+                  sub: '< 30 days remaining',
+                  accentColor: AppColors.warning,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.qr_code_2_rounded,
+                  label: 'Scanned Today',
+                  value: '28',
+                  sub: 'Traceability lots',
+                  accentColor: AppColors.accent,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.security_rounded,
+                  label: 'Audit Integrity',
+                  value: 'OK',
+                  sub: 'Immutable trail',
+                  accentColor: AppColors.primary,
+                ),
+              ),
+            ],
+          )
+        else ...[
+          const Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.sanitizer_rounded,
+                  label: 'Sterilization',
+                  value: '100%',
+                  sub: 'All validated',
+                  accentColor: AppColors.success,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.inventory_2_rounded,
+                  label: 'DLC Alerts',
+                  value: '2',
+                  sub: '< 30 days left',
+                  accentColor: AppColors.warning,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.qr_code_2_rounded,
+                  label: 'Scanned Today',
+                  value: '28',
+                  sub: 'Lots processed',
+                  accentColor: AppColors.accent,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.security_rounded,
+                  label: 'Audit Integrity',
+                  value: 'OK',
+                  sub: 'Immutable trail',
+                  accentColor: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 18),
+
+        // Live API Server Connection Box
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundElevated,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 18,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.cloud_done_rounded, size: 20, color: AppColors.success),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Connected Backend API',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: dentistrackFont(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.successBg,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      'API v1 ACTIVE',
+                      style: dentistrackFont(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _DetailRow(label: 'Endpoint', value: ApiConstants.baseUrl),
+              const _DetailRow(label: 'Auth Protocol', value: 'Sanctum Bearer Token'),
+              _DetailRow(label: 'Account Email', value: widget.user.email),
+              _DetailRow(label: 'Registered On', value: widget.user.createdAt ?? 'Just now', isLast: true),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+
+        // Recent Traceability Activity
+        Text(
+          'RECENT TRACEABILITY LOGS',
+          style: dentistrackFont(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundElevated,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 18,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Column(
+            children: [
+              _ActivityItem(
+                icon: Icons.sanitizer_rounded,
+                title: 'Autoclave Cycle #089 Validated',
+                time: '12 min ago',
+                subtitle: 'Opérateur: Dr. John · 134°C Conforme',
+                color: AppColors.success,
+              ),
+              _ActivityItem(
+                icon: Icons.qr_code_scanner_rounded,
+                title: 'Stock Exit · Lot #LOT-2026-89A',
+                time: '1 hour ago',
+                subtitle: 'Implant Titane 3.5mm · Scan Caméra',
+                color: AppColors.accent,
+              ),
+              _ActivityItem(
+                icon: Icons.warning_amber_rounded,
+                title: 'DLC Alert · Composite Seringues',
+                time: 'Today, 08:30 AM',
+                subtitle: 'DLC: 25-08-2026 (< 10 jours)',
+                color: AppColors.warning,
+                isLast: true,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildScanTab(BuildContext context, BoxConstraints constraints) {
+    final scanHeight = (constraints.maxHeight * 0.45).clamp(240.0, 360.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Scan Medical Labels',
+          style: dentistrackFont(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Instant DataMatrix, QR Code & Barcode recognition',
+          style: dentistrackFont(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          height: scanHeight,
+          decoration: BoxDecoration(
+            color: AppColors.backgroundDark,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.accent, width: 2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.qr_code_scanner_rounded,
+                    size: 56,
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceOverlay,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Align code within reticle to scan',
+                    style: dentistrackFont(fontSize: 13, color: AppColors.textInverse),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        DentisTrackPrimaryButton(
+          label: 'Launch Camera Scanner',
+          icon: const Icon(Icons.camera_alt_rounded, size: 20, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pushNamed(PractitionerRoutes.scanner);
+          },
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildStockTab(BuildContext context, BoxConstraints constraints) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Dental Inventory & Lots',
+          style: dentistrackFont(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Catalogue, stock movements, and batch DLCs',
+          style: dentistrackFont(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 16),
+        const _DetailCard(
+          title: 'Stock Overview',
+          rows: [
+            _DetailItem(title: 'Total Active Products', val: '248 references'),
+            _DetailItem(title: 'Critical Outages', val: '0 products'),
+            _DetailItem(title: 'Batches with DLC < 30 days', val: '2 lots (Action needed)'),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const _DetailCard(
+          title: 'Quick Category Distribution',
+          rows: [
+            _DetailItem(title: 'Implants & Prosthetics', val: '94 units in stock'),
+            _DetailItem(title: 'Endodontics & Hygiene', val: '112 units in stock'),
+            _DetailItem(title: 'Sterilization Pouches', val: '42 packs ready'),
+          ],
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildCyclesTab(BuildContext context, BoxConstraints constraints) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Sterilization Cycles',
+          style: dentistrackFont(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Autoclave cycle tracking, controls and conformity reports',
+          style: dentistrackFont(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 16),
+        const _DetailCard(
+          title: 'Active Autoclave Devices',
+          rows: [
+            _DetailItem(title: 'Melag Vacuklav 40B', val: 'Ready · Cycle #090 pending'),
+            _DetailItem(title: 'Sterilizer Lisa 500', val: 'Standby · Validated'),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const _DetailCard(
+          title: 'Daily Compliance Summary',
+          rows: [
+            _DetailItem(title: 'Helix Test (Daily)', val: 'Passed (08:00 AM)'),
+            _DetailItem(title: 'Vacuum Test (Weekly)', val: 'Validated (-0.85 bar)'),
+            _DetailItem(title: 'Cycle Temperature', val: '134°C / 18 min (Standard)'),
+          ],
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildProfileTab(BuildContext context, BoxConstraints constraints) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Practice Profile & Security',
+          style: dentistrackFont(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundElevated,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 18,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppColors.primary,
+                    child: Text(
+                      _initials,
+                      style: dentistrackFont(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.user.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: dentistrackFont(fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.user.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: dentistrackFont(fontSize: 14, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Divider(color: AppColors.borderSubtle),
+              const SizedBox(height: 10),
+              _DetailRow(label: 'Account ID', value: '#${widget.user.id}'),
+              const _DetailRow(label: 'Cabinet Status', value: 'Multi-Tenant Verified'),
+              const _DetailRow(label: 'Audit Trail', value: 'Immutable Logging Active', isLast: true),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        DentisTrackSecondaryButton(
+          label: 'Sign Out Account',
+          icon: const Icon(Icons.logout_rounded, size: 18, color: AppColors.error),
+          onPressed: _handleLogout,
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return AppBackground(
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: AppColors.backgroundDefault,
+      body: SafeArea(
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+            // Top Navigation Header with max width constraint
+            ResponsiveContentContainer(
+              maxWidth: Breakpoints.dashboardMaxWidth,
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
               child: Row(
                 children: [
-                  const SteriqoreLogo(size: 22),
-                  const SizedBox(width: 10),
-                  Text('Steriqore',
-                      style: steriqoreFont(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
+                  const DentisTrackLogo(size: 32, showSubtitle: false),
                   const Spacer(),
-                  _HeaderIconButton(
-                    icon: Icons.notifications_none_rounded,
-                    showDot: true,
-                    onTap: () {},
-                  ),
-                  const SizedBox(width: 10),
-                  _HeaderIconButton(
+                  DentisTrackIconButton(
                     icon: Icons.logout_rounded,
-                    isLoading: _isLoggingOut,
+                    color: AppColors.error,
                     onTap: _handleLogout,
                   ),
                 ],
               ),
             ),
 
+            // Main Scrollable Area with responsive constraints
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 6, 18, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Greeting
-                    Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF3B6FD4), Color(0xFF4F8EF7)],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: SteriqoreColors.accent.withValues(alpha: 0.35),
-                                blurRadius: 14,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Text(_initials,
-                              style: steriqoreFont(fontSize: 16, fontWeight: FontWeight.w700)),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Hello,',
-                                  style: steriqoreFont(fontSize: 12, color: SteriqoreColors.textSecondary)),
-                              Text(widget.user.name,
-                                  style: steriqoreFont(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
-                            ],
-                          ),
-                        ),
-                        _Pill(text: 'Active', color: SteriqoreColors.success),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final tabs = [
+                    _buildHomeTab(context, constraints),
+                    _buildScanTab(context, constraints),
+                    _buildStockTab(context, constraints),
+                    _buildCyclesTab(context, constraints),
+                    _buildProfileTab(context, constraints),
+                  ];
 
-                    // Metrics
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _MetricCard(
-                            icon: Icons.show_chart_rounded,
-                            label: 'System Status',
-                            value: '99.9%',
-                            sub: 'Operational',
-                            accent: SteriqoreColors.success,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _MetricCard(
-                            icon: Icons.shield_outlined,
-                            label: 'Security Score',
-                            value: '98%',
-                            sub: '2FA Enabled',
-                            accent: SteriqoreColors.accent,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _MetricCard(
-                            icon: Icons.devices_rounded,
-                            label: 'Active Sessions',
-                            value: '2',
-                            sub: 'Devices',
-                            accent: SteriqoreColors.purple,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _MetricCard(
-                            icon: Icons.key_rounded,
-                            label: 'Passkeys',
-                            value: '3',
-                            sub: 'Registered',
-                            accent: SteriqoreColors.warning,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Backend connection card
-                    _Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 30,
-                                height: 30,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: SteriqoreColors.accent.withValues(alpha: 0.12),
-                                  border: Border.all(color: SteriqoreColors.accent.withValues(alpha: 0.25)),
-                                ),
-                                child: const Icon(Icons.public_rounded, size: 15, color: SteriqoreColors.accent),
-                              ),
-                              const SizedBox(width: 9),
-                              Text('Backend Connection',
-                                  style: steriqoreFont(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
-                              const Spacer(),
-                              _Pill(text: 'LIVE', color: SteriqoreColors.success, small: true),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          _ConnectionRow(label: 'Endpoint', value: 'api.steriqore.com/v1'),
-                          _ConnectionRow(label: 'Auth Type', value: 'Sanctum Bearer Token'),
-                          _ConnectionRow(label: 'Token', value: 'sk_live_xH7mKpQ2v...'),
-                          _ConnectionRow(label: 'User', value: widget.user.email, isLast: true),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Recent activity
-                    Text('RECENT ACTIVITY',
-                        style: steriqoreFont(
-                            fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: SteriqoreColors.textSecondary)),
-                    const SizedBox(height: 10),
-                    _Card(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        children: [
-                          _ActivityRow(
-                            icon: Icons.smartphone_rounded,
-                            title: 'Login from iPhone 15 Pro',
-                            time: 'Today, 10:24 AM',
-                            meta: 'Paris, FR',
-                            color: SteriqoreColors.success,
-                          ),
-                          _ActivityRow(
-                            icon: Icons.key_rounded,
-                            title: "Passkey 'MacBook Pro' Created",
-                            time: 'Yesterday, 4:15 PM',
-                            meta: 'Touch ID',
-                            color: SteriqoreColors.accent,
-                          ),
-                          _ActivityRow(
-                            icon: Icons.shield_outlined,
-                            title: '2FA Verification Passed',
-                            time: '2 days ago, 9:00 AM',
-                            meta: 'Authenticator App',
-                            color: SteriqoreColors.purple,
-                            isLast: true,
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton(
-                                onPressed: () {},
-                                style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                                child: Text('View all activity →',
-                                    style: steriqoreFont(fontSize: 13, fontWeight: FontWeight.w600, color: SteriqoreColors.accent)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    OutlineButton(
-                      borderColor: SteriqoreColors.error.withValues(alpha: 0.22),
-                      textColor: SteriqoreColors.error,
-                      onPressed: _handleLogout,
-                      child: _isLoggingOut
-                          ? const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [Spinner(color: SteriqoreColors.error), SizedBox(width: 10), Text('Signing out…')],
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.logout_rounded, size: 16),
-                                const SizedBox(width: 8),
-                                Text('Sign Out', style: steriqoreFont(fontSize: 14, fontWeight: FontWeight.w600, color: SteriqoreColors.error)),
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            ),
-
-            // Bottom tab bar
-            Container(
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.07))),
-                color: SteriqoreColors.bg.withValues(alpha: 0.8),
-              ),
-              padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
-              child: Row(
-                children: List.generate(_tabs.length, (i) {
-                  final active = _activeTab == i;
-                  final tab = _tabs[i];
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _activeTab = i),
-                      behavior: HitTestBehavior.opaque,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(tab.icon, size: 20, color: active ? SteriqoreColors.accent : const Color(0x59FFFFFF)),
-                          const SizedBox(height: 4),
-                          Text(tab.label,
-                              style: steriqoreFont(
-                                  fontSize: 10,
-                                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                                  color: active ? SteriqoreColors.accent : const Color(0x59FFFFFF))),
-                          if (active) ...[
-                            const SizedBox(height: 4),
-                            Container(width: 18, height: 2, decoration: BoxDecoration(borderRadius: BorderRadius.circular(1), color: SteriqoreColors.accent)),
-                          ],
-                        ],
-                      ),
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: ResponsiveContentContainer(
+                      maxWidth: Breakpoints.dashboardMaxWidth,
+                      child: tabs[_activeTab],
                     ),
                   );
-                }),
+                },
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
-class _HeaderIconButton extends StatelessWidget {
-  final IconData icon;
-  final bool showDot;
-  final bool isLoading;
-  final VoidCallback onTap;
-
-  const _HeaderIconButton({
-    required this.icon,
-    required this.onTap,
-    this.showDot = false,
-    this.isLoading = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap,
-      child: Container(
-        width: 34,
-        height: 34,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: Colors.white.withValues(alpha: 0.07),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            isLoading
-                ? const Spinner()
-                : Icon(icon, size: 17, color: Colors.white.withValues(alpha: 0.72)),
-            if (showDot)
-              Positioned(
-                top: -2,
-                right: -2,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: SteriqoreColors.error,
-                    border: Border.all(color: SteriqoreColors.bg, width: 1.5),
+            // Bottom Navigation Bar with responsive container
+            Container(
+              decoration: const BoxDecoration(
+                color: AppColors.backgroundDark,
+              ),
+              child: SafeArea(
+                top: false,
+                child: ResponsiveContentContainer(
+                  maxWidth: 600,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: List.generate(_navTabs.length, (i) {
+                      final tab = _navTabs[i];
+                      final isActive = _activeTab == i;
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _activeTab = i),
+                          behavior: HitTestBehavior.opaque,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isActive ? tab.activeIcon : tab.icon,
+                                size: 22,
+                                color: isActive ? Colors.white : Colors.white54,
+                              ),
+                              const SizedBox(height: 3),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  tab.label,
+                                  maxLines: 1,
+                                  style: dentistrackFont(
+                                    fontSize: 11,
+                                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                                    color: isActive ? Colors.white : Colors.white54,
+                                  ),
+                                ),
+                              ),
+                              if (isActive)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 4),
+                                  width: 4,
+                                  height: 4,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.accent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                              else
+                                const SizedBox(height: 8),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  final String text;
-  final Color color;
-  final bool small;
-  const _Pill({required this.text, required this.color, this.small = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: small ? 7 : 8, vertical: small ? 2 : 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(small ? 5 : 6),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
-      ),
-      child: Text(text, style: steriqoreFont(fontSize: small ? 10 : 11, fontWeight: FontWeight.w700, color: color)),
     );
   }
 }
@@ -410,69 +740,92 @@ class _MetricCard extends StatelessWidget {
   final String label;
   final String value;
   final String sub;
-  final Color accent;
+  final Color accentColor;
 
   const _MetricCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.sub,
-    required this.accent,
+    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return _Card(
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundElevated,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.cardShadow,
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
-              color: accent.withValues(alpha: 0.10),
-              border: Border.all(color: accent.withValues(alpha: 0.30)),
             ),
-            child: Icon(icon, size: 16, color: accent),
+            child: Icon(icon, size: 20, color: accentColor),
           ),
-          const SizedBox(height: 12),
-          Text(value, style: steriqoreFont(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.4)),
-          const SizedBox(height: 4),
-          Text(label, style: steriqoreFont(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9))),
+          const SizedBox(height: 10),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: dentistrackFont(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(sub, style: steriqoreFont(fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: dentistrackFont(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          Text(
+            sub,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: dentistrackFont(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _Card extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  const _Card({required this.child, this.padding = const EdgeInsets.all(16)});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: SteriqoreColors.cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SteriqoreColors.cardBorder),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _ConnectionRow extends StatelessWidget {
+class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
   final bool isLast;
-  const _ConnectionRow({required this.label, required this.value, this.isLast = false});
+
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.isLast = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -480,35 +833,51 @@ class _ConnectionRow extends StatelessWidget {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: steriqoreFont(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.42), fontWeight: FontWeight.w500)),
-            Flexible(
-              child: Text(value,
-                  textAlign: TextAlign.right,
-                  overflow: TextOverflow.ellipsis,
-                  style: steriqoreFont(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.82), fontWeight: FontWeight.w600)),
+            Expanded(
+              flex: 4,
+              child: Text(
+                label,
+                style: dentistrackFont(fontSize: 13, color: AppColors.textSecondary),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 6,
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                style: dentistrackFont(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
             ),
           ],
         ),
-        if (!isLast) Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: Colors.white.withValues(alpha: 0.06))),
+        if (!isLast) const Divider(color: AppColors.borderSubtle, height: 16),
       ],
     );
   }
 }
 
-class _ActivityRow extends StatelessWidget {
+class _ActivityItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final String time;
-  final String meta;
+  final String subtitle;
   final Color color;
   final bool isLast;
 
-  const _ActivityRow({
+  const _ActivityItem({
     required this.icon,
     required this.title,
     required this.time,
-    required this.meta,
+    required this.subtitle,
     required this.color,
     this.isLast = false,
   });
@@ -516,38 +885,115 @@ class _ActivityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 13),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        border: isLast ? null : Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+        border: isLast ? null : const Border(bottom: BorderSide(color: AppColors.borderSubtle)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
-              color: color.withValues(alpha: 0.15),
-              border: Border.all(color: color.withValues(alpha: 0.28)),
             ),
-            child: Icon(icon, size: 15, color: color),
+            child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: steriqoreFont(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: dentistrackFont(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
-                Text('$time · $meta', style: steriqoreFont(fontSize: 12, color: Colors.white.withValues(alpha: 0.4))),
+                Text(
+                  subtitle,
+                  style: dentistrackFont(fontSize: 12, color: AppColors.textSecondary),
+                ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, size: 16, color: Colors.white.withValues(alpha: 0.25)),
+          const SizedBox(width: 8),
+          Text(
+            time,
+            style: dentistrackFont(fontSize: 11, color: AppColors.textTertiary),
+          ),
         ],
       ),
     );
   }
+}
+
+class _DetailCard extends StatelessWidget {
+  final String title;
+  final List<_DetailItem> rows;
+
+  const _DetailCard({required this.title, required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundElevated,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.cardShadow,
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: dentistrackFont(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+          ...rows.map(
+            (r) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: Text(
+                      r.title,
+                      style: dentistrackFont(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 5,
+                    child: Text(
+                      r.val,
+                      textAlign: TextAlign.right,
+                      style: dentistrackFont(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailItem {
+  final String title;
+  final String val;
+  const _DetailItem({required this.title, required this.val});
 }

@@ -1,35 +1,36 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Light Theme Colors
-  static const Color lightBackground = Color(0xFFFFFFFF);
-  static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightForeground = Color(0xFF18181B);
-  static const Color lightMutedForeground = Color(0xFF706F6C);
-  static const Color lightBorder = Color(0xFFE4E4E7);
-  static const Color lightInput = Color(0xFFE4E4E7);
-  static const Color lightPrimary = Color(0xFF18181B);
-  static const Color lightPrimaryForeground = Color(0xFFFAFAFA);
-  static const Color lightSecondary = Color(0xFFF4F4F5);
-  static const Color lightSecondaryForeground = Color(0xFF18181B);
-  static const Color lightDestructive = Color(0xFFEF4444);
+  AppColors._();
 
-  // Dark Theme Colors
-  static const Color darkBackground = Color(0xFF0A0A0A);
-  static const Color darkSurface = Color(0xFF161615);
-  static const Color darkCard = Color(0xFF161615);
-  static const Color darkForeground = Color(0xFFEDEDEC);
-  static const Color darkMutedForeground = Color(0xFFA1A09A);
-  static const Color darkBorder = Color(0xFF27272A);
-  static const Color darkInput = Color(0xFF27272A);
-  static const Color darkPrimary = Color(0xFFFAFAFA);
-  static const Color darkPrimaryForeground = Color(0xFF18181B);
-  static const Color darkSecondary = Color(0xFF27272A);
-  static const Color darkSecondaryForeground = Color(0xFFEDEDEC);
-  static const Color darkDestructive = Color(0xFFF87171);
+  static const Color primary = Color(0xFF000000);
+  static const Color primaryInverse = Color(0xFFFFFFFF);
+  static const Color secondary = Color(0xFF1C1C1E);
+  static const Color accent = Color(0xFF007AFF);
+  static const Color accentLight = Color(0xFFE5F1FF);
+  static const Color accentSurface = Color(0xFFF0F6FF);
+  static const Color background = Color(0xFFF2F2F7);
+  static const Color backgroundDefault = Color(0xFFF2F2F7);
+  static const Color elevated = Color(0xFFFFFFFF);
+  static const Color backgroundElevated = Color(0xFFFFFFFF);
+  static const Color backgroundDark = Color(0xFF000000);
+  static const Color textPrimary = Color(0xFF000000);
+  static const Color textSecondary = Color(0xFF6C6C70);
+  static const Color textTertiary = Color(0xFFAEAEB2);
+  static const Color textInverse = Color(0xFFFFFFFF);
+  static const Color borderSubtle = Color(0xFFE5E5EA);
+  static const Color borderStrong = Color(0xFFC7C7CC);
+  static const Color success = Color(0xFF34C759);
+  static const Color successBg = Color(0xFFE8F9ED);
+  static const Color warning = Color(0xFFFF9500);
+  static const Color warningBg = Color(0xFFFFF4E5);
+  static const Color error = Color(0xFFFF3B30);
+  static const Color errorBg = Color(0xFFFFEBEA);
+  static const Color info = Color(0xFF007AFF);
+  static const Color infoBg = Color(0xFFE5F1FF);
 
-  // Accent & Status
-  static const Color success = Color(0xFF22C55E);
-  static const Color error = Color(0xFFEF4444);
+  // Surface overlays & glassmorphism
+  static const Color surfaceOverlay = Color(0x26FFFFFF); // rgba(255,255,255,0.15)
+  static const Color surfaceOverlayDark = Color(0x99000000);
+  static const Color cardShadow = Color(0x0A000000);
 }

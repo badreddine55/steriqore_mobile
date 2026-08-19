@@ -40,16 +40,22 @@ class _CustomTextFieldState extends State<CustomTextField> {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              widget.label,
-              style: GoogleFonts.instrumentSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: labelColor,
+            Expanded(
+              child: Text(
+                widget.label,
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: labelColor,
+                ),
               ),
             ),
-            if (widget.trailingAction != null) widget.trailingAction!,
+            if (widget.trailingAction != null) ...[
+              const SizedBox(width: 8),
+              widget.trailingAction!,
+            ],
           ],
         ),
         const SizedBox(height: 8),
