@@ -86,10 +86,8 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.black,
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is Authenticated) {
+          if (state is Authenticated || state is AuthRegistered) {
             context.go('/home');
-          } else if (state is AuthRegistered) {
-            context.go('/role-selection');
           }
         },
         builder: (context, state) {
@@ -262,27 +260,15 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 const SizedBox(height: AppDimensions.s24),
 
-                                // Register link
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "Don't have an account? ",
-                                      style: AppTypography.body.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
+                                // Clinical notice footer
+                                Center(
+                                  child: Text(
+                                    'Accounts are provisioned by your Clinic Administrator',
+                                    textAlign: TextAlign.center,
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColors.textTertiary,
                                     ),
-                                    GestureDetector(
-                                      onTap: () => context.go('/register'),
-                                      child: Text(
-                                        'Register',
-                                        style: AppTypography.body.copyWith(
-                                          color: AppColors.accent,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                                 const SizedBox(height: AppDimensions.s24),
                               ],

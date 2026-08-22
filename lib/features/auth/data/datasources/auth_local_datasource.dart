@@ -19,6 +19,10 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   final FlutterSecureStorage secureStorage;
   final SharedPreferences? prefs;
 
+  // In-memory token cache for synchronous, zero-latency access across all HTTP requests
+  static String? cachedToken;
+  static UserModel? cachedUser;
+
   AuthLocalDataSourceImpl({
     FlutterSecureStorage? secureStorage,
     this.prefs,
@@ -26,18 +30,49 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> saveToken(String token) async {
-    await secureStorage.write(key: StorageKeys.authToken, value: token);
+    cachedToken = token;
+    try {
+      await secureStorage.write(key: StorageKeys.authToken, value: token);
+    } catch (_) {}
+
+    try {
+      final sp = prefs ?? await SharedPreferences.getInstance();
+      await sp.setString(StorageKeys.authToken, token);
+    } catch (_) {}
   }
 
   @override
   Future<String?> getToken() async {
-    return await secureStorage.read(key: StorageKeys.authToken);
+    if (cachedToken != null && cachedToken!.isNotEmpty) {
+      return cachedToken;
+    }
+
+    try {
+      final token = await secureStorage.read(key: StorageKeys.authToken);
+      if (token != null && token.isNotEmpty) {
+        cachedToken = token;
+        return token;
+      }
+    } catch (_) {}
+
+    try {
+      final sp = prefs ?? await SharedPreferences.getInstance();
+      final spToken = sp.getString(StorageKeys.authToken);
+      if (spToken != null && spToken.isNotEmpty) {
+        cachedToken = spToken;
+        return spToken;
+      }
+    } catch (_) {}
+
+    return null;
   }
 
   @override
   Future<void> saveUser(UserModel user) async {
+    cachedUser = user;
     final sp = prefs ?? await SharedPreferences.getInstance();
     await sp.setString(StorageKeys.currentUser, jsonEncode(user.toJson()));
+    await sp.setString(StorageKeys.userRole, user.role);
 
     try {
       Box box;
@@ -53,12 +88,18 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<UserModel?> getUser() async {
+    if (cachedUser != null) {
+      return cachedUser;
+    }
+
     final sp = prefs ?? await SharedPreferences.getInstance();
     final userStr = sp.getString(StorageKeys.currentUser);
     if (userStr != null && userStr.isNotEmpty) {
       try {
         final map = jsonDecode(userStr) as Map<String, dynamic>;
-        return UserModel.fromJson(map);
+        final user = UserModel.fromJson(map);
+        cachedUser = user;
+        return user;
       } catch (_) {}
     }
 
@@ -68,7 +109,9 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
         final hiveUser = box.get(StorageKeys.currentUser);
         if (hiveUser != null) {
           final map = jsonDecode(hiveUser as String) as Map<String, dynamic>;
-          return UserModel.fromJson(map);
+          final user = UserModel.fromJson(map);
+          cachedUser = user;
+          return user;
         }
       }
     } catch (_) {}
@@ -94,6 +137,8 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<String?> getRole() async {
+    if (cachedUser != null) return cachedUser!.role;
+
     final sp = prefs ?? await SharedPreferences.getInstance();
     final role = sp.getString(StorageKeys.userRole);
     if (role != null && role.isNotEmpty) return role;
@@ -111,10 +156,18 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> clearAuth() async {
-    await secureStorage.delete(key: StorageKeys.authToken);
-    final sp = prefs ?? await SharedPreferences.getInstance();
-    await sp.remove(StorageKeys.currentUser);
-    await sp.remove(StorageKeys.userRole);
+    cachedToken = null;
+    cachedUser = null;
+    try {
+      await secureStorage.delete(key: StorageKeys.authToken);
+    } catch (_) {}
+
+    try {
+      final sp = prefs ?? await SharedPreferences.getInstance();
+      await sp.remove(StorageKeys.authToken);
+      await sp.remove(StorageKeys.currentUser);
+      await sp.remove(StorageKeys.userRole);
+    } catch (_) {}
 
     try {
       if (Hive.isBoxOpen(StorageKeys.authBox)) {

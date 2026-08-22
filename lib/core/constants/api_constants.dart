@@ -59,6 +59,12 @@ class ApiConstants {
   // History / Dashboard
   static const String stockLevels = '/stock-levels';
   static const String alerts = '/alerts';
+
+  // Admin
+  static const String users = '/users';
+  static String userDetail(dynamic id) => '/users/$id';
+  static const String auditTrail = '/audit-trail';
+  static const String organizations = '/organizations/current';
 }
 
 class ApiErrorHandler {

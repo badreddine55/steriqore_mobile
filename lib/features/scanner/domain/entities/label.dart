@@ -46,10 +46,14 @@ class Label extends Equatable {
 
   bool get isExpiredByDate => expirationDate.isBefore(DateTime.now());
 
+  bool get isExpired => status == LabelStatusType.expired || isExpiredByDate;
+  bool get isRecalled => status == LabelStatusType.recalled;
+  bool get alreadyUsed => status == LabelStatusType.alreadyUsed || isUsed;
+  String? get blockReason => recallReason ?? (isExpired ? 'Sterilization DLC has expired.' : null);
+
   bool get isBlocked =>
-      status == LabelStatusType.expired ||
-      status == LabelStatusType.recalled ||
-      isExpiredByDate;
+      isExpired ||
+      isRecalled;
 
   bool get isUsed => status == LabelStatusType.alreadyUsed || usedAt != null;
 

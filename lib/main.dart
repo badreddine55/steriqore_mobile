@@ -35,6 +35,17 @@ import 'features/usage/domain/usecases/get_patients.dart';
 import 'features/usage/domain/usecases/get_usage_history.dart';
 import 'features/usage/domain/usecases/record_usage.dart';
 import 'features/usage/presentation/bloc/usage_bloc.dart';
+import 'features/admin/domain/repositories/admin_repository.dart';
+import 'features/admin/domain/usecases/create_cabinet_user.dart';
+import 'features/admin/domain/usecases/get_audit_trail.dart';
+import 'features/admin/domain/usecases/get_cabinet_settings.dart';
+import 'features/admin/domain/usecases/get_cabinet_users.dart';
+import 'features/admin/domain/usecases/toggle_user_status.dart';
+import 'features/admin/domain/usecases/update_cabinet_settings.dart';
+import 'features/admin/domain/usecases/update_cabinet_user.dart';
+import 'features/admin/presentation/bloc/admin_audit_bloc.dart';
+import 'features/admin/presentation/bloc/admin_settings_bloc.dart';
+import 'features/admin/presentation/bloc/admin_users_bloc.dart';
 
 class AppScrollBehavior extends MaterialScrollBehavior {
   @override
@@ -102,6 +113,15 @@ class SteriqoreApp extends StatelessWidget {
         Provider<HomeRepository>.value(value: sl<HomeRepository>()),
         Provider<GetDashboardStatsUseCase>.value(value: sl<GetDashboardStatsUseCase>()),
 
+        Provider<AdminRepository>.value(value: sl<AdminRepository>()),
+        Provider<GetCabinetUsersUseCase>.value(value: sl<GetCabinetUsersUseCase>()),
+        Provider<CreateCabinetUserUseCase>.value(value: sl<CreateCabinetUserUseCase>()),
+        Provider<UpdateCabinetUserUseCase>.value(value: sl<UpdateCabinetUserUseCase>()),
+        Provider<ToggleUserStatusUseCase>.value(value: sl<ToggleUserStatusUseCase>()),
+        Provider<GetAuditTrailUseCase>.value(value: sl<GetAuditTrailUseCase>()),
+        Provider<GetCabinetSettingsUseCase>.value(value: sl<GetCabinetSettingsUseCase>()),
+        Provider<UpdateCabinetSettingsUseCase>.value(value: sl<UpdateCabinetSettingsUseCase>()),
+
         // Feature BLoCs
         BlocProvider<AuthBloc>(
           create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
@@ -123,6 +143,15 @@ class SteriqoreApp extends StatelessWidget {
         ),
         BlocProvider<HistoryBloc>(
           create: (_) => sl<HistoryBloc>(),
+        ),
+        BlocProvider<AdminUsersBloc>(
+          create: (_) => sl<AdminUsersBloc>(),
+        ),
+        BlocProvider<AdminAuditBloc>(
+          create: (_) => sl<AdminAuditBloc>(),
+        ),
+        BlocProvider<AdminSettingsBloc>(
+          create: (_) => sl<AdminSettingsBloc>(),
         ),
       ],
       child: MaterialApp.router(

@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 import '../constants/storage_keys.dart';
 import '../errors/exceptions.dart';
+import '../../features/auth/data/datasources/auth_local_datasource.dart';
 
 class ApiInterceptor extends Interceptor {
   final FlutterSecureStorage _secureStorage;
@@ -16,17 +18,36 @@ class ApiInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Add auth token if present
-    final token = await _secureStorage.read(key: StorageKeys.authToken);
+    // 1. Resolve Authorization Token from multi-tier storage
+    String? token = AuthLocalDataSourceImpl.cachedToken;
+
+    if (token == null || token.isEmpty) {
+      try {
+        token = await _secureStorage.read(key: StorageKeys.authToken);
+      } catch (_) {}
+    }
+
+    if (token == null || token.isEmpty) {
+      try {
+        final sp = await SharedPreferences.getInstance();
+        token = sp.getString(StorageKeys.authToken);
+      } catch (_) {}
+    }
+
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
 
     options.headers['Accept'] = 'application/json';
-    options.headers['Content-Type'] = 'application/json';
+    if (options.data != null && options.headers['Content-Type'] == null) {
+      options.headers['Content-Type'] = 'application/json';
+    }
 
     if (kDebugMode) {
       debugPrint('➡️ [DIO REQ] ${options.method} ${options.uri}');
+      if (token != null && token.isNotEmpty) {
+        debugPrint('🔑 [DIO AUTH] Bearer ${token.substring(0, token.length > 8 ? 8 : token.length)}...');
+      }
       if (options.data != null) {
         debugPrint('📦 [BODY] ${options.data}');
       }
@@ -56,7 +77,7 @@ class ApiInterceptor extends Interceptor {
     final message = ApiErrorHandler.getMessage(statusCode, backendMessage);
 
     if (kDebugMode) {
-      debugPrint('❌ [DIO ERR] Status: $statusCode Message: $message');
+      debugPrint('❌ [DIO ERR] Status: $statusCode Message: $message URI: ${err.requestOptions.uri}');
     }
 
     if (statusCode == 410 || statusCode == 409) {

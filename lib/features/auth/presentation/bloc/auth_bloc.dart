@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
+import '../../data/datasources/auth_local_datasource.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/get_current_user.dart';
 import '../../domain/usecases/login.dart';
@@ -22,7 +23,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.getCurrentUserUseCase,
     this.registerUseCase,
     this.authRepository,
-  }) : super(const AuthInitial()) {
+  }) : super(
+          AuthLocalDataSourceImpl.cachedUser != null
+              ? Authenticated(AuthLocalDataSourceImpl.cachedUser!.toEntity())
+              : const AuthInitial(),
+        ) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginSubmitted>(_onAuthLoginSubmitted);
     on<AuthRegisterSubmitted>(_onAuthRegisterSubmitted);
@@ -114,7 +119,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         (user) => emit(AuthRegistered(user)),
       );
     } else {
-      // Fallback
       emit(const AuthFailureState('Registration service not initialized.'));
     }
   }
@@ -132,7 +136,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         (user) => emit(Authenticated(user)),
       );
     } else {
-      // Direct success if repository isn't provided directly
       final result = await getCurrentUserUseCase(const NoParams());
       result.fold(
         (failure) => emit(const AuthFailureState('Biometric sign in failed.')),

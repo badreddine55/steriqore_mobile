@@ -10,6 +10,7 @@ import 'package:steriqore_mobile/features/auth/domain/usecases/get_current_user.
 import 'package:steriqore_mobile/features/auth/domain/usecases/login.dart';
 import 'package:steriqore_mobile/features/auth/domain/usecases/logout.dart';
 import 'package:steriqore_mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:steriqore_mobile/features/auth/presentation/bloc/auth_state.dart';
 import 'package:steriqore_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:steriqore_mobile/features/history/domain/entities/usage_history_entry.dart';
 import 'package:steriqore_mobile/features/history/domain/repositories/history_repository.dart';
@@ -195,7 +196,7 @@ void main() {
       loginUseCase: LoginUseCase(authRepo),
       logoutUseCase: LogoutUseCase(authRepo),
       getCurrentUserUseCase: GetCurrentUserUseCase(authRepo),
-    );
+    )..emit(const Authenticated(User(id: 1, name: 'Dr. Dupont', email: 'doctor@cabinet.fr', role: 'practitioner')));
 
     final homeRepo = MockHomeRepo();
     homeBloc = HomeBloc(getDashboardStatsUseCase: GetDashboardStatsUseCase(homeRepo));

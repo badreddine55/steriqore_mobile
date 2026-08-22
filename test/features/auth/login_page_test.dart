@@ -96,7 +96,7 @@ void main() {
     expect(find.text('Forgot Password?'), findsOneWidget);
     expect(find.text('Sign In'), findsOneWidget);
     expect(find.text('Sign in with Biometrics'), findsOneWidget);
-    expect(find.text('Register'), findsOneWidget);
+    expect(find.text('Accounts are provisioned by your Clinic Administrator'), findsOneWidget);
   });
 
   testWidgets('LoginPage submits credentials when Sign In is tapped', (tester) async {

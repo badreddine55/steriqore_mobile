@@ -31,12 +31,18 @@ class AuthRepositoryImpl implements AuthRepository {
       // Save token first
       await localDataSource.saveToken(response.token);
 
-      // Verify user details
-      final user = response.user;
-      await localDataSource.saveUser(user);
-      await localDataSource.saveRole(user.role);
+      // Fetch server-authoritative user profile & role via GET /auth/me
+      UserModel authoritativeUser;
+      try {
+        authoritativeUser = await remoteDataSource.getMe();
+      } catch (_) {
+        authoritativeUser = response.user;
+      }
 
-      return Right(user.toEntity());
+      await localDataSource.saveUser(authoritativeUser);
+      await localDataSource.saveRole(authoritativeUser.role);
+
+      return Right(authoritativeUser.toEntity());
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message, e.statusCode));
     } on ValidationException catch (e) {
@@ -102,18 +108,7 @@ class AuthRepositoryImpl implements AuthRepository {
         return Right(cachedUser.toEntity());
       }
 
-      // If no cached session, provide mock practitioner for quick biometric sign-in
-      const mockUser = UserModel(
-        id: 1,
-        name: 'Dr. Practitioner',
-        email: 'doctor@cabinet.fr',
-        role: 'practitioner',
-        cabinetName: 'Cabinet Central, Paris',
-      );
-      await localDataSource.saveToken('mock-biometric-jwt-token');
-      await localDataSource.saveUser(mockUser);
-      await localDataSource.saveRole('practitioner');
-      return const Right(mockUser);
+      return const Left(AuthFailure('No active biometric session. Please sign in with email/password.', 401));
     } catch (e) {
       return Left(ServerFailure('Biometric authentication failed: $e'));
     }
@@ -152,33 +147,36 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, void>> logout() async {
     try {
       await remoteDataSource.logout();
-      await localDataSource.clearAuth();
-      return const Right(null);
-    } catch (e) {
-      await localDataSource.clearAuth();
-      return const Right(null);
-    }
+    } catch (_) {}
+    await localDataSource.clearAuth();
+    return const Right(null);
   }
 
   @override
   Future<Either<Failure, User>> getCurrentUser() async {
     try {
-      final cachedUser = await localDataSource.getUser();
-      if (cachedUser != null) {
-        return Right(cachedUser.toEntity());
+      final token = await localDataSource.getToken();
+      if (token == null || token.isEmpty) {
+        return const Left(AuthFailure('No active session. Please log in.', 401));
       }
 
-      final remoteUser = await remoteDataSource.getMe();
-      await localDataSource.saveUser(remoteUser);
-      return Right(remoteUser.toEntity());
-    } on AuthException catch (e) {
-      return Left(AuthFailure(e.message, e.statusCode));
-    } on NetworkException catch (_) {
-      final cachedUser = await localDataSource.getUser();
-      if (cachedUser != null) {
-        return Right(cachedUser.toEntity());
+      // Query server via GET /auth/me for fresh role & permissions
+      try {
+        final remoteUser = await remoteDataSource.getMe();
+        await localDataSource.saveUser(remoteUser);
+        await localDataSource.saveRole(remoteUser.role);
+        return Right(remoteUser.toEntity());
+      } catch (_) {
+        // Fallback to local cache if network is unavailable
+        final cachedUser = await localDataSource.getUser();
+        if (cachedUser != null) {
+          return Right(cachedUser.toEntity());
+        }
+        return const Left(NetworkFailure('Could not connect to server and no cached profile found.'));
       }
-      return const Left(NetworkFailure('No network and no cached user found.'));
+    } on AuthException catch (e) {
+      await localDataSource.clearAuth();
+      return Left(AuthFailure(e.message, e.statusCode));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

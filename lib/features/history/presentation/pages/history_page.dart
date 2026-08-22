@@ -15,6 +15,7 @@ import '../../../../core/di/injection.dart';
 import '../widgets/history_filter_chips.dart';
 import '../widgets/history_list_item.dart';
 import '../widgets/sync_status_indicator.dart';
+import '../../../../shared/widgets/role_based_bottom_nav.dart';
 
 class HistoryPage extends StatefulWidget {
   final HistoryBloc? historyBloc;
@@ -114,6 +115,7 @@ class _HistoryPageState extends State<HistoryPage> {
           onPressed: () => context.pop(),
         ),
       ),
+      bottomNavigationBar: const RoleBasedBottomNav(currentRoute: '/history'),
       body: SafeArea(
         child: BlocBuilder<HistoryBloc, HistoryState>(
           builder: (context, state) {

@@ -60,6 +60,20 @@ import '../../features/history/domain/repositories/history_repository.dart';
 import '../../features/history/domain/usecases/get_practitioner_history.dart';
 import '../../features/history/presentation/bloc/history_bloc.dart';
 
+import '../../features/admin/data/datasources/admin_remote_datasource.dart';
+import '../../features/admin/data/repositories/admin_repository_impl.dart';
+import '../../features/admin/domain/repositories/admin_repository.dart';
+import '../../features/admin/domain/usecases/create_cabinet_user.dart';
+import '../../features/admin/domain/usecases/get_audit_trail.dart';
+import '../../features/admin/domain/usecases/get_cabinet_settings.dart';
+import '../../features/admin/domain/usecases/get_cabinet_users.dart';
+import '../../features/admin/domain/usecases/toggle_user_status.dart';
+import '../../features/admin/domain/usecases/update_cabinet_settings.dart';
+import '../../features/admin/domain/usecases/update_cabinet_user.dart';
+import '../../features/admin/presentation/bloc/admin_audit_bloc.dart';
+import '../../features/admin/presentation/bloc/admin_settings_bloc.dart';
+import '../../features/admin/presentation/bloc/admin_users_bloc.dart';
+
 final sl = GetIt.instance;
 
 Future<void> configureDependencies() async {
@@ -88,8 +102,11 @@ Future<void> configureDependencies() async {
   sl.registerFactory(() => OnboardingBloc(localDataSource: sl()));
 
   // Auth Feature
+  final authLocalDataSource = AuthLocalDataSourceImpl(secureStorage: sl(), prefs: sl());
+  await authLocalDataSource.getToken();
+  await authLocalDataSource.getUser();
+  sl.registerLazySingleton<AuthLocalDataSource>(() => authLocalDataSource);
   sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(sl()));
-  sl.registerLazySingleton<AuthLocalDataSource>(() => AuthLocalDataSourceImpl(secureStorage: sl(), prefs: sl()));
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(remoteDataSource: sl(), localDataSource: sl()));
   sl.registerLazySingleton(() => LoginUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
@@ -145,6 +162,28 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<HomeRepository>(() => HomeRepositoryImpl(remoteDataSource: sl(), usageLocalDataSource: sl()));
   sl.registerLazySingleton(() => GetDashboardStatsUseCase(sl()));
   sl.registerFactory(() => HomeBloc(getDashboardStatsUseCase: sl()));
+
+  // Admin Feature
+  sl.registerLazySingleton<AdminRemoteDataSource>(() => AdminRemoteDataSourceImpl(sl()));
+  sl.registerLazySingleton<AdminRepository>(() => AdminRepositoryImpl(remoteDataSource: sl()));
+  sl.registerLazySingleton(() => GetCabinetUsersUseCase(sl()));
+  sl.registerLazySingleton(() => CreateCabinetUserUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateCabinetUserUseCase(sl()));
+  sl.registerLazySingleton(() => ToggleUserStatusUseCase(sl()));
+  sl.registerLazySingleton(() => GetAuditTrailUseCase(sl()));
+  sl.registerLazySingleton(() => GetCabinetSettingsUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateCabinetSettingsUseCase(sl()));
+  sl.registerFactory(() => AdminUsersBloc(
+        getCabinetUsersUseCase: sl(),
+        createCabinetUserUseCase: sl(),
+        updateCabinetUserUseCase: sl(),
+        toggleUserStatusUseCase: sl(),
+      ));
+  sl.registerFactory(() => AdminAuditBloc(getAuditTrailUseCase: sl()));
+  sl.registerFactory(() => AdminSettingsBloc(
+        getCabinetSettingsUseCase: sl(),
+        updateCabinetSettingsUseCase: sl(),
+      ));
 
   // Sync Service
   sl.registerLazySingleton<SyncService>(() => SyncService(

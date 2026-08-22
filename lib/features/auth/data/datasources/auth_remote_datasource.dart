@@ -1,4 +1,5 @@
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
 import '../models/login_request_model.dart';
 import '../models/login_response_model.dart';
@@ -26,9 +27,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
 
     if (response.data is Map<String, dynamic>) {
-      return LoginResponseModel.fromJson(response.data as Map<String, dynamic>);
+      final res = LoginResponseModel.fromJson(response.data as Map<String, dynamic>);
+      if (res.token.isNotEmpty) {
+        return res;
+      }
     }
-    throw Exception('Invalid login response format.');
+    throw const ServerException(message: 'Invalid response or missing token from server.');
   }
 
   @override
@@ -39,9 +43,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
 
     if (response.data is Map<String, dynamic>) {
-      return LoginResponseModel.fromJson(response.data as Map<String, dynamic>);
+      final res = LoginResponseModel.fromJson(response.data as Map<String, dynamic>);
+      return res;
     }
-    throw Exception('Invalid register response format.');
+    throw const ServerException(message: 'Invalid registration response from server.');
   }
 
   @override
@@ -54,10 +59,24 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<UserModel> getMe() async {
     final response = await _dioClient.get(ApiConstants.me);
-    final data = response.data is Map && (response.data['data'] != null || response.data['user'] != null)
-        ? (response.data['data'] ?? response.data['user']) as Map<String, dynamic>
-        : response.data as Map<String, dynamic>;
 
-    return UserModel.fromJson(data);
+    final dynamic data = response.data;
+    Map<String, dynamic> userMap = <String, dynamic>{};
+
+    if (data is Map<String, dynamic>) {
+      if (data['user'] is Map<String, dynamic>) {
+        userMap = data['user'] as Map<String, dynamic>;
+      } else if (data['data'] is Map<String, dynamic>) {
+        userMap = data['data'] as Map<String, dynamic>;
+      } else {
+        userMap = data;
+      }
+    }
+
+    if (userMap.isNotEmpty) {
+      return UserModel.fromJson(userMap);
+    }
+
+    throw const ServerException(message: 'Unable to parse user profile from /auth/me');
   }
 }

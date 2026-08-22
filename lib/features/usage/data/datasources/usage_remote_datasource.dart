@@ -30,13 +30,9 @@ class UsageRemoteDataSourceImpl implements UsageRemoteDataSource {
           ? response.data['data'] as List
           : (response.data is List ? response.data as List : []);
 
-      if (list.isEmpty) {
-        return _getMockPatients(query);
-      }
-
       return list.map((e) => PatientModel.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
-      return _getMockPatients(query);
+      return [];
     }
   }
 
@@ -55,61 +51,5 @@ class UsageRemoteDataSourceImpl implements UsageRemoteDataSource {
         : response.data as Map<String, dynamic>;
 
     return UsageResponseModel.fromJson(data);
-  }
-
-  List<PatientModel> _getMockPatients(String? query) {
-    final all = [
-      PatientModel.fromJson(const {
-        'id': 'PAT-001',
-        'firstName': 'Marie',
-        'lastName': 'Dubois',
-        'dossierId': 'DOS-2024-001',
-        'allergies': ['Pénicilline', 'Latex'],
-        'allergySeverity': ['severe', 'moderate'],
-        'lastVisit': '2026-08-10',
-      }),
-      PatientModel.fromJson(const {
-        'id': 'PAT-002',
-        'firstName': 'Jean',
-        'lastName': 'Moreau',
-        'dossierId': 'DOS-2024-045',
-        'allergies': ['Ibuprofène'],
-        'allergySeverity': ['moderate'],
-        'lastVisit': '2026-08-12',
-      }),
-      PatientModel.fromJson(const {
-        'id': 'PAT-003',
-        'firstName': 'Sophie',
-        'lastName': 'Lefèvre',
-        'dossierId': 'DOS-2025-112',
-        'allergies': [],
-        'allergySeverity': [],
-        'lastVisit': '2026-08-14',
-      }),
-      PatientModel.fromJson(const {
-        'id': 'PAT-004',
-        'firstName': 'Pierre',
-        'lastName': 'Bernard',
-        'dossierId': 'DOS-2023-089',
-        'allergies': ['Lidocaïne', 'Latex'],
-        'allergySeverity': ['severe', 'severe'],
-        'lastVisit': '2026-08-08',
-      }),
-      PatientModel.fromJson(const {
-        'id': 'PAT-005',
-        'firstName': 'Claire',
-        'lastName': 'Rousseau',
-        'dossierId': 'DOS-2025-234',
-        'allergies': ['Amoxicilline'],
-        'allergySeverity': ['moderate'],
-        'lastVisit': '2026-08-13',
-      }),
-    ];
-
-    if (query != null && query.trim().isNotEmpty) {
-      final q = query.toLowerCase().trim();
-      return all.where((p) => p.fullName.toLowerCase().contains(q) || p.dossierId.toLowerCase().contains(q)).toList();
-    }
-    return all;
   }
 }

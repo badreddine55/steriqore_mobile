@@ -141,8 +141,18 @@ class _RegisterPageState extends State<RegisterPage> {
       backgroundColor: Colors.black,
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthRegistered || state is Authenticated) {
-            context.go('/role-selection');
+          if (state is Authenticated) {
+            if (state.user.isAdmin) {
+              context.go('/admin/dashboard');
+            } else {
+              context.go('/home');
+            }
+          } else if (state is AuthRegistered) {
+            if (state.user.isAdmin) {
+              context.go('/admin/dashboard');
+            } else {
+              context.go('/home');
+            }
           }
         },
         builder: (context, state) {

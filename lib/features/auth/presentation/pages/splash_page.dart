@@ -78,14 +78,17 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
       return;
     }
 
-    final savedRole = await authRepo.getSavedRole();
-    if (savedRole == null || savedRole.isEmpty) {
-      if (mounted) context.go('/role-selection');
-      return;
-    }
+    final userResult = await authRepo.getCurrentUser();
+    final user = userResult.fold((_) => null, (u) => u);
+    final role = user?.role.toLowerCase() ?? (await authRepo.getSavedRole())?.toLowerCase() ?? 'practitioner';
+    final isAdmin = role == 'admin' || role == 'administrateur';
 
     if (mounted) {
-      context.go('/home');
+      if (isAdmin) {
+        context.go('/admin/dashboard');
+      } else {
+        context.go('/home');
+      }
     }
   }
 
